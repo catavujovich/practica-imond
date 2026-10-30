@@ -260,3 +260,75 @@ Se crearon tres Data Marts para organizar la información comercial:
 El código SQL se encuentra en `sql/04_data_marts.sql` y los resultados exportados están disponibles en la carpeta `dw/`.
 
 Estos conjuntos de datos permiten preparar la información para su análisis y visualización en Power BI.
+
+## Diccionario de datos del Data Warehouse
+
+El Data Warehouse está compuesto por seis tablas de dimensiones y seis tablas de hechos. Las dimensiones contienen información descriptiva, mientras que las tablas de hechos registran las operaciones del negocio.
+
+### Tablas de dimensiones
+
+| Tabla | Clave primaria | Descripción |
+|---|---|---|
+| `dim_channel` | `channel_key` | Canales de venta, identificados por código y nombre. |
+| `dim_customer` | `customer_key` | Clientes, con datos personales, estado y fecha de registro. |
+| `dim_date` | `date_key` | Calendario con fecha, año, mes, día y nombres correspondientes. |
+| `dim_product` | `product_key` | Productos, SKU, categoría, familia y precio de lista. |
+| `dim_province` | `province_key` | Provincias, con nombre y código. |
+| `dim_store` | `store_key` | Tiendas físicas y sus identificadores de dirección. |
+
+### Tablas de hechos
+
+| Tabla | Clave primaria | Principales atributos |
+|---|---|---|
+| `fact_sales_order` | `order_id` | Fecha, cliente, canal, tienda, provincia, subtotal, impuestos, envío, importe total y estado. |
+| `fact_sales_order_item` | `order_item_id` | Pedido, producto, cantidad, precio unitario, descuento e importe de la línea. |
+| `fact_payment` | `payment_id` | Pedido, método de pago, estado, importe, fecha y referencia de transacción. |
+| `fact_shipment` | `shipment_id` | Pedido, transportista, seguimiento, estado y fechas de envío y entrega. |
+| `fact_web_session` | `session_id` | Fecha, cliente, origen de la visita, dispositivo e inicio y fin de sesión. |
+| `fact_nps` | `nps_id` | Fecha, cliente, canal, puntuación, comentario y fecha de respuesta. |
+
+### Principales claves y relaciones
+
+- `date_key`: relaciona las operaciones con `dim_date`.
+- `customer_key`: relaciona las operaciones con `dim_customer`.
+- `channel_key`: relaciona las operaciones con `dim_channel`.
+- `product_key`: relaciona los productos vendidos con `dim_product`.
+- `province_key`: relaciona los pedidos con `dim_province`.
+- `store_key`: relaciona las ventas con `dim_store`.
+- `order_id`: permite vincular pedidos con sus productos, pagos y envíos.
+
+Las claves terminadas en `_key` se utilizan para conectar las tablas de hechos con las dimensiones correspondientes, cuando están presentes.
+
+### Tipos de datos
+
+Se utilizan principalmente los siguientes tipos:
+
+- `INTEGER` y `BIGINT`: identificadores y cantidades.
+- `VARCHAR`: nombres, códigos, estados y descripciones.
+- `DATE`: fechas del calendario.
+- `TIMESTAMP`: fechas y horas de operaciones.
+- `DECIMAL(12,2)`: importes monetarios con dos decimales.
+
+## Supuestos y criterios del análisis
+
+Para construir el Data Warehouse y calcular los indicadores comerciales de EcoBottle AR, se establecieron los siguientes criterios:
+
+1. **Período de análisis:** se consideran los datos disponibles desde el 1 de enero de 2024 hasta el 30 de septiembre de 2025.
+
+2. **Moneda:** todos los importes monetarios se expresan en pesos argentinos (ARS).
+
+3. **Ventas válidas:** se consideran ventas los pedidos con estado `PAID` o `FULFILLED`. Los pedidos cancelados, reembolsados o pendientes de pago no se incluyen en las ventas totales.
+
+4. **Ventas totales:** se calculan sumando el campo `total_amount` de los pedidos válidos, incluyendo impuestos y costos de envío.
+
+5. **Ticket promedio:** se obtiene dividiendo el importe total de las ventas válidas por la cantidad de pedidos válidos.
+
+6. **Usuarios activos:** se consideran los clientes identificados que registraron al menos una sesión web durante el período analizado. Se utiliza `COUNT(DISTINCT customer_key)` para evitar contar varias veces al mismo cliente dentro del período.
+
+7. **NPS:** se consideran promotores las respuestas de 9 o 10 puntos, detractores las de 0 a 6 y pasivos las de 7 u 8. El NPS se calcula como el porcentaje de promotores menos el porcentaje de detractores.
+
+8. **Datos faltantes:** los valores `NULL` se mantienen cuando representan información no disponible o que no corresponde a una operación, como las sesiones anónimas o las compras sin envío.
+
+9. **Modelo dimensional:** se utiliza un modelo estrella basado en Kimball, con dimensiones descriptivas y tablas de hechos para las operaciones comerciales.
+
+10. **Herramientas:** las transformaciones y los indicadores se calculan mediante SQL en DuckDB, mientras que Power BI se utiliza para la visualización de los resultados.
