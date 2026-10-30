@@ -204,3 +204,59 @@ Si alguna vez querés volver a generar los datos o comprobar que están bien:
 python generator/generate_raw.py     # vuelve a crear los CSV de raw/ (salen idénticos)
 python generator/validate_raw.py     # revisa que los datos cumplan todas las reglas
 ```
+
+## Desarrollo del Data Warehouse
+
+Para el análisis comercial de EcoBottle AR se implementó un Data Warehouse utilizando DuckDB y siguiendo el enfoque de modelado dimensional de Kimball.
+
+### Modelo estrella
+
+Se crearon seis tablas de dimensiones:
+
+- `dim_date`: información de fechas, meses y años.
+- `dim_customer`: información de los clientes.
+- `dim_product`: información de los productos.
+- `dim_channel`: canales de venta.
+- `dim_province`: provincias.
+- `dim_store`: tiendas físicas.
+
+También se crearon seis tablas de hechos:
+
+- `fact_sales_order`: pedidos de venta.
+- `fact_sales_order_item`: productos incluidos en cada pedido.
+- `fact_payment`: pagos.
+- `fact_shipment`: envíos.
+- `fact_web_session`: sesiones web.
+- `fact_nps`: respuestas de satisfacción.
+
+Las transformaciones se encuentran en `sql/01_dimensiones.sql` y `sql/02_hechos.sql`. El diagrama generado del modelo está disponible en `dw/modelo_estrella.md`.
+
+### Consultas SQL y KPIs
+
+Las consultas comerciales se encuentran en `sql/03_consultas.sql`.
+
+Además, se desarrolló el script `calcular_kpis.py`, que calcula y exporta indicadores comerciales utilizando SQL en DuckDB.
+
+Los indicadores incluyen ventas totales, usuarios activos, ticket promedio, NPS, ventas por provincia, ranking de productos y evolución mensual.
+
+Para generar los archivos de indicadores:
+
+```bash
+python calcular_kpis.py
+```
+
+Los resultados se guardan como archivos CSV en la carpeta `dw/`.
+
+### Data Marts
+
+Se crearon tres Data Marts para organizar la información comercial:
+
+| Data Mart | Descripción |
+|---|---|
+| `dm_ventas` | Ventas totales, cantidad de pedidos y ticket promedio |
+| `dm_usuarios` | Usuarios activos registrados por fecha |
+| `dm_nps` | Respuestas de satisfacción, promotores, detractores y NPS |
+
+El código SQL se encuentra en `sql/04_data_marts.sql` y los resultados exportados están disponibles en la carpeta `dw/`.
+
+Estos conjuntos de datos permiten preparar la información para su análisis y visualización en Power BI.
